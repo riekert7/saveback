@@ -60,6 +60,12 @@ test('matches() accepts All posts and collection pages, rejects home', () => {
   assert.equal(adapter.matches('https://example.com/test_user/saved/all-posts/'), false);
 });
 
+test('collection branch is anchored: trailing junk and non-numeric ids are rejected', () => {
+  assert.equal(adapter.matches('https://www.instagram.com/test_user/saved/all-posts/foo/'), false);
+  assert.equal(adapter.matches('https://www.instagram.com/test_user/saved/my-list/notanid/'), false);
+  assert.equal(adapter.matches('https://www.instagram.com/test_user/saved/my-list/17900000000000000/extra'), false);
+});
+
 test('collections overview page is rejected by matches()', () => {
   assert.equal(adapter.matches('https://www.instagram.com/test_user/saved/'), false);
   assert.equal(adapter.matches('https://www.instagram.com/test_user/saved'), false);

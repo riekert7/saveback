@@ -10,7 +10,7 @@
     image: 'img',
   };
   const POST = /^\/p\/([\w-]+)\/?$/;
-  const SAVED = /^\/[^/]+\/saved\/(?:all-posts|[^/]+\/[^/]+)\/?$/;
+  const SAVED = /^\/[^/]+\/saved\/(?:all-posts|[^/]+\/\d+)\/?$/;
 
   const matches = (url) => {
     try {
