@@ -1,0 +1,63 @@
+<!doctype html>
+<html><body>
+<main>
+<div data-testid="primaryColumn">
+<section aria-label="Timeline: Bookmarks">
+<div>
+<article data-testid="tweet" role="article">
+  <div data-testid="UserAvatar-Container-testuser"><img alt="" src="https://pbs.twimg.com/profile_images/1/avatar_normal.jpg"></div>
+  <div data-testid="User-Name">
+    <a href="/testuser" role="link"><span>Test User</span></a>
+    <a href="/testuser" role="link"><span>@testuser</span></a>
+    <a href="/testuser/status/1234567890123456789" role="link"><time datetime="2026-11-01T10:00:00.000Z">Nov 1</time></a>
+  </div>
+  <div data-testid="tweetText" lang="en"><span>Sample post text</span></div>
+</article>
+</div>
+<div>
+<article data-testid="tweet" role="article">
+  <div data-testid="UserAvatar-Container-otheruser"><img alt="" src="https://pbs.twimg.com/profile_images/2/avatar_normal.jpg"></div>
+  <div data-testid="User-Name">
+    <a href="/otheruser" role="link"><span>Other User</span></a>
+    <a href="/otheruser" role="link"><span>@otheruser</span></a>
+    <a href="/otheruser/status/1234567890123456790" role="link"><time datetime="2026-11-02T10:00:00.000Z">Nov 2</time></a>
+  </div>
+  <div data-testid="tweetText" lang="en"><span>Own text of the quoting post</span></div>
+  <div role="link" tabindex="0">
+    <div data-testid="UserAvatar-Container-quoteduser"><img alt="" src="https://pbs.twimg.com/profile_images/3/avatar_normal.jpg"></div>
+    <div data-testid="User-Name">
+      <span>Quoted User</span><span>@quoteduser</span>
+      <time datetime="2026-10-30T10:00:00.000Z">Oct 30</time>
+    </div>
+    <div data-testid="tweetText" lang="en"><span>Quoted tweet text</span></div>
+    <div data-testid="tweetPhoto"><img alt="Image" src="https://pbs.twimg.com/media/QUOTED.jpg"></div>
+  </div>
+</article>
+</div>
+<div>
+<article data-testid="tweet" role="article">
+  <div data-testid="UserAvatar-Container-mediauser"><img alt="" src="https://pbs.twimg.com/profile_images/4/avatar_normal.jpg"></div>
+  <div data-testid="User-Name">
+    <a href="/mediauser" role="link"><span>Media User</span></a>
+    <a href="/mediauser" role="link"><span>@mediauser</span></a>
+    <a href="/mediauser/status/1234567890123456791" role="link"><time datetime="2026-11-03T10:00:00.000Z">Nov 3</time></a>
+  </div>
+  <div data-testid="tweetPhoto"><img alt="Image" src="https://pbs.twimg.com/media/PHOTO1.jpg?format=jpg&name=medium"></div>
+  <div data-testid="placementTracking"><video poster="https://pbs.twimg.com/amplify_video_thumb/1/img/POSTER.jpg" src="blob:https://x.com/abc"></video></div>
+</article>
+</div>
+<div>
+<article data-testid="tweet" role="article">
+  <div data-testid="UserAvatar-Container-longuser"><img alt="" src="https://pbs.twimg.com/profile_images/5/avatar_normal.jpg"></div>
+  <div data-testid="User-Name">
+    <a href="/longuser" role="link"><span>Long User</span></a>
+    <a href="/longuser" role="link"><span>@longuser</span></a>
+    <a href="/longuser/status/1234567890123456792" role="link"><time datetime="2026-11-04T10:00:00.000Z">Nov 4</time></a>
+  </div>
+  <div data-testid="tweetText" lang="en"><span>Sample long post text</span><button data-testid="tweet-text-show-more-link"><span>Show more</span></button></div>
+</article>
+</div>
+</section>
+</div>
+</main>
+</body></html>
