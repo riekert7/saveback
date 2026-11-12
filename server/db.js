@@ -19,7 +19,9 @@ export function openDb(path) {
   db.exec('PRAGMA busy_timeout = 5000'); // two local processes can share one file
   if (path !== ':memory:') db.exec('PRAGMA journal_mode = WAL');
   db.exec(`
+    -- pk is the explicit FTS rowid. No migration needed: no database existed before this schema.
     CREATE TABLE IF NOT EXISTS items (
+      pk INTEGER PRIMARY KEY,
       id TEXT NOT NULL UNIQUE,
       platform TEXT NOT NULL,
       native_id TEXT NOT NULL,
@@ -39,17 +41,17 @@ export function openDb(path) {
   return db;
 }
 
-/** Replace the FTS row for an item (kept in sync by hand, rowid = items.rowid). */
+/** Replace the FTS row for an item (kept in sync by hand, rowid = items.pk). */
 function syncFts(db, id) {
-  const r = db.prepare('SELECT rowid, text, author, url, transcript, notes FROM items WHERE id = ?').get(id);
-  db.prepare('DELETE FROM items_fts WHERE rowid = ?').run(r.rowid);
+  const r = db.prepare('SELECT pk, text, author, url, transcript, notes FROM items WHERE id = ?').get(id);
+  db.prepare('DELETE FROM items_fts WHERE rowid = ?').run(r.pk);
   db.prepare('INSERT INTO items_fts (rowid, text, author, url, transcript, notes) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(r.rowid, r.text, r.author, r.url, r.transcript ?? '', r.notes);
+    .run(r.pk, r.text, r.author, r.url, r.transcript ?? '', r.notes);
 }
 
-/** Run fn in a transaction. */
+/** Run fn in a write transaction. IMMEDIATE takes the write lock up front: a deferred read-then-write can fail with SQLITE_BUSY_SNAPSHOT, which ignores busy_timeout. */
 function tx(db, fn) {
-  db.exec('BEGIN');
+  db.exec('BEGIN IMMEDIATE');
   try {
     const out = fn();
     db.exec('COMMIT');
@@ -61,7 +63,8 @@ function tx(db, fn) {
 }
 
 /**
- * Insert, or update content fields only (seen, notes, tags, captured_at are kept).
+ * Insert, or merge content fields (seen, notes, tags, captured_at are kept). A later capture with
+ * empty author/text/media or null saved_at/transcript (e.g. a YouTube capture after save_url) keeps the stored value.
  * @param {DatabaseSync} db
  * @param {Item} item
  * @returns {{id: string, created: boolean}}
@@ -73,8 +76,12 @@ export function upsertItem(db, item) {
     db.prepare(`
       INSERT INTO items (id, platform, native_id, url, author, text, media, saved_at, transcript, captured_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET url = excluded.url, author = excluded.author, text = excluded.text,
-        media = excluded.media, saved_at = excluded.saved_at, transcript = excluded.transcript
+      ON CONFLICT(id) DO UPDATE SET url = excluded.url,
+        author = CASE WHEN excluded.author <> '' THEN excluded.author ELSE author END,
+        text = CASE WHEN excluded.text <> '' THEN excluded.text ELSE text END,
+        media = CASE WHEN excluded.media <> '[]' THEN excluded.media ELSE media END,
+        saved_at = COALESCE(excluded.saved_at, saved_at),
+        transcript = COALESCE(excluded.transcript, transcript)
     `).run(id, item.platform, item.native_id, item.url, item.author, item.text, JSON.stringify(item.media),
       item.saved_at, item.transcript, new Date().toISOString());
     syncFts(db, id);
@@ -116,7 +123,7 @@ export function searchSaved(db, { query = '', platform, since, limit } = {}) {
     // Quote every token so FTS operators/punctuation are plain text; drop tokens with no letters/digits.
     const tokens = query.split(/\s+/).filter((t) => /[\p{L}\p{N}]/u.test(t)).map((t) => `"${t.replaceAll('"', '""')}"`);
     if (tokens.length === 0) return [];
-    from = 'items JOIN items_fts ON items_fts.rowid = items.rowid';
+    from = 'items JOIN items_fts ON items_fts.rowid = items.pk';
     where.push('items_fts MATCH ?');
     args.push(tokens.join(' '));
     order = 'items_fts.rank';

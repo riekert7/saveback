@@ -115,3 +115,47 @@ test('notes are searchable after addNote, and append', () => {
   assert.equal(getSaved(db, 'x:1').notes, 'quokka idea\nsecond thought');
   assert.equal(db.prepare('SELECT count(*) AS n FROM items_fts').get().n, 1);
 });
+
+test('re-upsert with null transcript keeps the stored transcript, still searchable', () => {
+  const db = openDb(':memory:');
+  upsertItem(db, mk({ platform: 'youtube', native_id: 'v', url: 'https://youtube.com/watch?v=v', transcript: 'mulch the beds in autumn' }));
+  upsertItem(db, mk({ platform: 'youtube', native_id: 'v', url: 'https://youtube.com/watch?v=v', author: '', transcript: null }));
+  const row = getSaved(db, 'youtube:v');
+  assert.equal(row.transcript, 'mulch the beds in autumn');
+  assert.equal(row.author, 'jane'); // old kept when new is ''
+  assert.deepEqual(searchSaved(db, { query: 'mulch' }).map((r) => r.id), ['youtube:v']);
+});
+
+test('re-upsert with empty author/text/media/saved_at keeps the old values', () => {
+  const db = openDb(':memory:');
+  upsertItem(db, mk({ media: ['https://a.com/1.jpg'] }));
+  upsertItem(db, mk({ author: '', text: '', media: [], saved_at: null }));
+  const row = getSaved(db, 'x:1');
+  assert.equal(row.author, 'jane');
+  assert.equal(row.text, 'sourdough starter tips');
+  assert.deepEqual(row.media, ['https://a.com/1.jpg']);
+  assert.equal(row.saved_at, '2026-11-01T10:00:00.000Z');
+  assert.equal(searchSaved(db, { query: 'sourdough' }).length, 1); // FTS reflects the merged row
+});
+
+test('re-upsert with non-empty new values replaces the old ones', () => {
+  const db = openDb(':memory:');
+  upsertItem(db, mk({ transcript: 'old words' }));
+  upsertItem(db, mk({ author: 'bob', text: 'fresh words', media: ['https://a.com/2.jpg'], saved_at: '2026-11-05T10:00:00.000Z', transcript: 'new words' }));
+  const row = getSaved(db, 'x:1');
+  assert.equal(row.author, 'bob');
+  assert.equal(row.text, 'fresh words');
+  assert.deepEqual(row.media, ['https://a.com/2.jpg']);
+  assert.equal(row.saved_at, '2026-11-05T10:00:00.000Z');
+  assert.equal(row.transcript, 'new words');
+  assert.equal(searchSaved(db, { query: 'fresh' }).length, 1);
+  assert.equal(searchSaved(db, { query: 'sourdough' }).length, 0);
+  assert.equal(searchSaved(db, { query: 'old' }).length, 0);
+});
+
+test('items has an explicit integer pk that is the FTS rowid', () => {
+  const db = openDb(':memory:');
+  upsertItem(db, mk());
+  const { pk } = db.prepare('SELECT pk FROM items WHERE id = ?').get('x:1');
+  assert.equal(db.prepare('SELECT count(*) AS n FROM items_fts WHERE rowid = ?').get(pk).n, 1);
+});
