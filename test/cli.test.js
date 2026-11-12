@@ -86,10 +86,23 @@ test('remote mode with empty token exits 1', async () => {
   assert.match(p.err, /SAVEBACK_TOKEN/);
 });
 
+test('remote mode refuses a whitespace-only or 15-character token, accepts 16', async () => {
+  for (const t of ['   ', ' \t\n', 'a'.repeat(15), `  ${'a'.repeat(15)}  `]) {
+    const p = run({ SAVEBACK_MODE: 'remote', SAVEBACK_TOKEN: t, SAVEBACK_DB: tmpDb(), PORT: String(await freePort()) });
+    assert.equal(await p.exit, 1, JSON.stringify(t));
+    assert.match(p.err, /SAVEBACK_TOKEN/);
+  }
+  const port = await freePort();
+  const base = `http://127.0.0.1:${port}`;
+  run({ SAVEBACK_MODE: 'remote', SAVEBACK_TOKEN: ` ${'a'.repeat(16)} `, SAVEBACK_DB: tmpDb(), PORT: String(port) });
+  await waitHealthy(base);
+  assert.equal((await ingest(base, { authorization: `Bearer ${'a'.repeat(16)}` })).status, 200); // stored trimmed
+});
+
 test('remote mode: health open, ingest and /mcp need the token, ingest then search over /mcp finds the item', async () => {
   const port = await freePort();
   const base = `http://127.0.0.1:${port}`;
-  run({ SAVEBACK_MODE: 'remote', SAVEBACK_TOKEN: 's3cret', SAVEBACK_DB: tmpDb(), PORT: String(port) });
+  run({ SAVEBACK_MODE: 'remote', SAVEBACK_TOKEN: 's3cret-s3cret-s3cret', SAVEBACK_DB: tmpDb(), PORT: String(port) });
   await waitHealthy(base);
 
   assert.equal((await fetch(`${base}/health`)).status, 200);
@@ -101,9 +114,9 @@ test('remote mode: health open, ingest and /mcp need the token, ingest then sear
   });
   assert.equal((await mcpPost({})).status, 401);
   assert.equal((await mcpPost({ authorization: 'Bearer wrong' })).status, 401);
-  assert.equal((await mcpPost({ authorization: 'Bearer s3cret', origin: 'https://evil.example' })).status, 403);
+  assert.equal((await mcpPost({ authorization: 'Bearer s3cret-s3cret-s3cret', origin: 'https://evil.example' })).status, 403);
 
-  const auth = { authorization: 'Bearer s3cret' };
+  const auth = { authorization: 'Bearer s3cret-s3cret-s3cret' };
   assert.equal((await ingest(base, auth)).status, 200);
 
   const client = new Client({ name: 't', version: '0' });
@@ -148,4 +161,16 @@ test('second local process on a taken port stays up and still answers MCP over s
   assert.match(b.err, new RegExp(`${port}`));
   assert.equal(b.child.exitCode, null);
   assert.equal(a.child.exitCode, null);
+});
+
+test('second local process takes over the receiver port once it is freed', async () => {
+  const port = await freePort();
+  const holder = net.createServer().listen(port, '127.0.0.1');
+  await new Promise((r) => holder.once('listening', r));
+  const b = run({ SAVEBACK_DB: tmpDb(), SAVEBACK_PORT: String(port), SAVEBACK_RETRY_MS: '100' }); // retry interval override is test-only
+  await waitFor(() => /already in use/.test(b.err), 'EADDRINUSE log');
+  await new Promise((r) => holder.close(r));
+  await waitHealthy(`http://127.0.0.1:${port}`);
+  assert.match(b.err, new RegExp(`receiver on 127.0.0.1:${port}`));
+  assert.equal(b.child.exitCode, null);
 });
