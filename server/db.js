@@ -16,6 +16,7 @@ const WHEN = 'COALESCE(saved_at, captured_at)';
  */
 export function openDb(path) {
   const db = new DatabaseSync(path);
+  db.exec('PRAGMA busy_timeout = 5000'); // two local processes can share one file
   if (path !== ':memory:') db.exec('PRAGMA journal_mode = WAL');
   db.exec(`
     CREATE TABLE IF NOT EXISTS items (

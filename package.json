@@ -3,6 +3,15 @@
   "version": "0.0.0",
   "type": "module",
   "license": "MIT",
+  "bin": {
+    "saveback": "server/cli.js"
+  },
+  "files": [
+    "server",
+    "shared",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=22.13"
   },
