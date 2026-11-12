@@ -4,14 +4,14 @@ An adapter is one classic script that turns a saved-posts page into Items. Use `
 
 1. **Capture the structure, not the content.** In your own logged-in browser, inspect the saved page and note tag names, `role` and `data-*` attributes, link shapes (with ids redacted) and text lengths. Avoid class names if they look generated. Keep none of the real posts, names or handles.
 2. **Build a synthetic fixture** at `test/fixtures/<platform>-saved.html`: invented authors (`Test User`, `testuser`), invented ids, placeholder text such as `Sample post text`, same structure as the real page. Include a text-less item, and anything that should be ignored (a nav link, an ad, a nested quote). Never commit real posts, names or handles.
-3. **Write `test/adapter-<platform>.test.js` first**, with the names the other adapter tests use:
-   - `extracts N items from fixture`
+3. **Write `test/adapter-<platform>.test.js` first.** Cover these cases, named like the existing adapter tests (exact names vary a little per adapter, so grep `test/adapter-*.test.js`):
+   - extraction count: `extracts 4 items from fixture` (x, linkedin, threads, youtube; instagram and facebook append a clause)
    - `every item passes validateItem`
-   - `text-less item keeps author and url`
-   - `matches() accepts the saved page and rejects the home page`
+   - a text-less item still has `author` and `url`: `image-only or text-less item still has author and url` (x, linkedin, threads); `image-only item has empty text and still has url and media` (instagram); `title-less item has empty text and still has url and thumbnail` (youtube); `item with no text keeps its url (...)` (facebook)
+   - `matches() accepts the saved page and rejects the home page` (x, linkedin, threads); the others describe their own pages, e.g. `matches() accepts /saved and /saved/, rejects home and other sites`
    - `extract on an empty page returns []`
 
-   Load the fixture with `linkedom` as in `test/adapter-x.test.js`, and run `mise exec node@22.23.4 -- npm test`.
+   Load the fixture with `linkedom` as in `test/adapter-x.test.js`, and run `npm test` (Node 22.13 or newer).
 4. **Write `extension/adapters/<platform>.js`.** A classic script (an IIFE, no imports) with a `SELECTORS` object at the top, `matches(url)`, and `extract(document)`, which must be pure: read the document you are given, return Items, touch nothing else. A bad card is skipped, not thrown. Finish with `globalThis.__saveback?.register({ platform, matches, extract })` and the `module.exports` guard the other adapters use so tests can `require` it.
 5. **Wire it into the popup** (`extension/popup.js`): add `adapters/<platform>.js` to `ADAPTER_FILES`, and add the platform's host and the saved page to open to `SAVED_PAGES`, which is the wording of the wrong-page message. If the platform is new to the server, add it to `PLATFORMS` in `shared/item.js`. Add host permissions in `extension/manifest.json` if the host is not covered.
 6. **Document it** in `docs/platform-status.md`: saved page, status and known limits.

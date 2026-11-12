@@ -66,7 +66,7 @@ Capture stops after 3 scroll steps with nothing new, or at 2000 items. Per-platf
 
 Hosted mode runs the same server behind a bearer token so the extension and Claude can reach it from anywhere. The repo ships a `railway.json` (start command `node server/cli.js`, health check `/health`).
 
-A first deploy fails its health check until `SAVEBACK_MODE`, the other variables and the volume are set (the server will not start without them), so set them before the first deploy or right after it and redeploy.
+A first deploy fails its health check until `SAVEBACK_MODE=remote` and `SAVEBACK_TOKEN` are set (without `SAVEBACK_MODE=remote` the server starts in local mode on 127.0.0.1 and Railway cannot reach it). Set the volume and `SAVEBACK_DB` before the first deploy too: without them the server still starts, but stores data on ephemeral disk and loses it on redeploy.
 
 1. Create a Railway project from this repo.
 2. Add a volume mounted at `/data`.
@@ -83,7 +83,7 @@ A first deploy fails its health check until `SAVEBACK_MODE`, the other variables
 claude mcp add --transport http saveback https://<your-domain>/mcp --header "Authorization: Bearer <token>"
 ```
 
-`claude mcp add --header` stores the token in Claude's config (`~/.claude.json`). To rotate it, change `SAVEBACK_TOKEN` on the server and add the server again with the new token (and paste the new token into the extension popup).
+`claude mcp add --header` stores the token in Claude's config (`~/.claude.json`). To rotate it, change `SAVEBACK_TOKEN` on the server run `claude mcp remove saveback`, then add the server again with the new token (adding it twice under the same name fails), and paste the new token into the extension popup.
 
 ## Privacy and safety
 
