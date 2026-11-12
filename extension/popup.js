@@ -5,12 +5,12 @@ const DEFAULT_ENDPOINT = 'http://127.0.0.1:7777';
 const ADAPTER_FILES = ['adapters/x.js', 'adapters/linkedin.js', 'adapters/threads.js'];
 // Hostname suffix -> platform and the page the user must open. Used for the wrong-page message.
 const SAVED_PAGES = {
-  x: { host: 'x.com', page: 'X bookmarks (x.com/i/bookmarks)' },
+  x: { host: 'x.com', page: 'X saved posts, the Bookmarks tab (x.com/i/history)' },
   youtube: { host: 'youtube.com', page: 'a YouTube playlist such as Watch later (youtube.com/playlist?list=WL)' },
   linkedin: { host: 'linkedin.com', page: 'LinkedIn saved posts (linkedin.com/my-items/saved-posts)' },
   instagram: { host: 'instagram.com', page: 'your Instagram saved page (instagram.com/<you>/saved/)' },
   facebook: { host: 'facebook.com', page: 'Facebook saved (facebook.com/saved)' },
-  threads: { host: 'threads.net', page: 'Threads saved (threads.net/saved)' },
+  threads: { host: 'threads.net', page: 'Threads saved (threads.com/saved)' },
 };
 
 function platformForUrl(url) {

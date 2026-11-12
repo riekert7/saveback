@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { describeResult } = require('../extension/popup.js'); // must load without chrome.*
+const { describeResult, platformForUrl } = require('../extension/popup.js'); // must load without chrome.*
 
 const endpoint = 'http://127.0.0.1:7777';
 
@@ -33,8 +33,32 @@ test('other server error is shown, not swallowed', () => {
 });
 
 test('wrong page says which page to open', () => {
-  assert.match(describeResult({ platform: 'x' }, false), /x\.com\/i\/bookmarks/);
+  assert.match(describeResult({ platform: 'x' }, false), /x\.com\/i\/history/);
   assert.match(describeResult({ platform: 'linkedin' }, false), /linkedin\.com\/my-items\/saved-posts/);
+});
+
+test('wrong-page message names the right page for each platform, from a real page URL', () => {
+  const cases = {
+    'https://x.com/home': ['x', /x\.com\/i\/history/],
+    'https://www.youtube.com/': ['youtube', /youtube\.com\/playlist\?list=WL/],
+    'https://www.linkedin.com/feed/': ['linkedin', /linkedin\.com\/my-items\/saved-posts/],
+    'https://www.instagram.com/': ['instagram', /instagram\.com\/<you>\/saved\//],
+    'https://www.facebook.com/': ['facebook', /facebook\.com\/saved/],
+    'https://www.threads.com/': ['threads', /threads\.com\/saved/],
+  };
+  for (const [url, [platform, page]] of Object.entries(cases)) {
+    assert.equal(platformForUrl(url), platform, url);
+    assert.match(describeResult({ platform: platformForUrl(url) }, false), page, url);
+  }
+});
+
+test('threads.com and threads.net users are never sent to threads.net', () => {
+  for (const url of ['https://www.threads.com/', 'https://threads.com/@someone', 'https://www.threads.net/']) {
+    assert.equal(platformForUrl(url), 'threads', url);
+    const msg = describeResult({ platform: platformForUrl(url) }, false);
+    assert.doesNotMatch(msg, /threads\.net/, url);
+    assert.match(msg, /threads\.com\/saved/, url);
+  }
 });
 
 test('unsupported site lists the supported platforms', () => {
