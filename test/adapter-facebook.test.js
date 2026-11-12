@@ -62,16 +62,51 @@ test('every item passes validateItem', () => {
   for (const i of adapter.extract(fixture())) validateItem(i);
 });
 
-test('a single saved item on the page is its own card', () => {
-  const d = doc(`<body><div role="main"><div><a href="/watch/?v=500000000000005"><img src="https://scontent-test.xx.fbcdn.net/a.jpg"></a>
-    <a href="/watch/?v=500000000000005">Sample solo title</a></div></div></body>`);
+test('a single saved item is its own card: nothing outside it leaks in (author, text, media)', () => {
+  const d = doc(`<body><div role="main"><div><div><a href="/watch/?v=500000000000005"><img src="https://scontent-test.xx.fbcdn.net/a.jpg"></a>
+    <a href="/watch/?v=500000000000005">Sample solo title</a></div></div>
+    <div><a href="/profile.php?id=100000000000055"><span>Someone Else</span></a><img src="https://scontent-test.xx.fbcdn.net/other.jpg"><span>Outside text that is much longer than the title</span></div></div></body>`);
   const items = adapter.extract(d);
   assert.equal(items.length, 1);
   assert.equal(items[0].text, 'Sample solo title');
+  assert.equal(items[0].author, '');
+  assert.deepEqual(items[0].media, ['https://scontent-test.xx.fbcdn.net/a.jpg']);
+});
+
+test('a related-video link inside a card neither ends the climb nor becomes an item', () => {
+  const items = adapter.extract(fixture());
+  assert.equal(byId(items, '777000000000007'), undefined);
+  assert.equal(byId(items, '100000000000001').text, 'Sample video title that is quite a bit longer than the others');
+  assert.equal(byId(items, '100000000000001').author, 'Test Page');
+});
+
+test('a group source link with a numeric segment is not an item and does not cost the card its text', () => {
+  const items = adapter.extract(fixture());
+  assert.equal(items.length, 4);
+  assert.equal(byId(items, '123456789012'), undefined);
+  assert.equal(byId(items, '100000000000003').text, 'Sample post caption with a photo');
+});
+
+test('only post-like paths yield ids; groups, photo, pages and profile paths never do', () => {
+  const link = (h) => `<a href="${h}"><img src="https://scontent-test.xx.fbcdn.net/a.jpg"></a><a href="${h}">T</a>`;
+  const hrefs = ['/groups/123456789012/', '/photo/?fbid=123456789012', '/photo.php?fbid=123456789012', '/pages/Test/123456789012/info', '/profile.php?id=123456789012', '/events/123456789012/about/'];
+  for (const h of hrefs) assert.deepEqual(adapter.extract(doc(`<body><div role="main">${link(h)}</div></body>`)), [], h);
+  const ok = { '/testpage/posts/123456789012': '123456789012', '/permalink/123456789012/': '123456789012', '/testpage/123456789012/abc/': '123456789012', '/groups/987654321098/posts/123456789012/': '123456789012' };
+  for (const [h, id] of Object.entries(ok)) assert.deepEqual(adapter.extract(doc(`<body><div role="main">${link(h)}</div></body>`)).map((i) => i.native_id), [id], h);
+});
+
+test('v must be digits before it is used in the canonical url', () => {
+  const link = (v) => `<a href="/watch/?v=${v}"><img src="https://scontent-test.xx.fbcdn.net/a.jpg"></a><a href="/watch/?v=${v}">T</a>`;
+  assert.deepEqual(adapter.extract(doc(`<body><div role="main">${link('abc%22def')}</div></body>`)), []);
+});
+
+test('an id seen through a single link only is secondary, not an item', () => {
+  const d = doc('<body><div role="main"><a href="/watch/?v=600000000000006">Lone related link</a></div></body>');
+  assert.deepEqual(adapter.extract(d), []);
 });
 
 test('non-fbcdn and non-http images are not media', () => {
-  const d = doc(`<body><div role="main"><div><a href="/watch/?v=500000000000005"><img src="data:image/gif;base64,AAAA"><img src="https://example.com/x.jpg"></a></div></div></body>`);
+  const d = doc(`<body><div role="main"><div><a href="/watch/?v=500000000000005"><img src="data:image/gif;base64,AAAA"><img src="https://example.com/x.jpg"></a><a href="/watch/?v=500000000000005">T</a></div></div></body>`);
   const [i] = adapter.extract(d);
   assert.deepEqual(i.media, []);
   validateItem(i);

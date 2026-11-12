@@ -2,9 +2,18 @@
 // Live structure (2026-11-13): https://www.facebook.com/saved. Class names are obfuscated, so nothing here
 // selects by class. Each saved item holds 2 links to the same video (a thumbnail link with an img and a
 // duration such as "0:30", and a text link with the title), often a source link too. So: derive an id from
-// every primary link inside [role="main"] (v= param, /reel/{id}, or the numeric path segment), and for each
-// distinct id climb from its first link to the biggest ancestor that holds links for that one id only.
-// That ancestor is the card. The page shows no save time (saved_at null).
+// every primary link inside [role="main"] (v= param, /reel/{id}, or the id of a post-like path), and for
+// each CARD id climb from its first link to the biggest ancestor that holds links for that one card id only.
+// That ancestor is the card, but the climb never enters [role="main"] itself (one saved item on the page must
+// not swallow the rest of main). The page shows no save time (saved_at null).
+// Rules that keep foreign links from breaking cards:
+//  - Only post-like paths carry an id: /watch/?v=digits, /reel/{id}, /{page}/posts/{id}, /permalink/{id},
+//    /groups/{g}/posts|permalink/{id}, /{page}/{id}/{seg}/. Groups, /photo, /pages/, /events/, profile.php and
+//    other numeric-segment links (usually a source link) are not ids.
+//  - An id is a CARD only if the page has the two-link pattern for it: at least two links, one of them
+//    holding an img (the thumbnail). An id seen through a single link is secondary (a "related video" link
+//    inside another card): it neither ends a climb nor becomes an item. Ceiling: a saved item that really
+//    has just one link is not captured.
 (function () {
   const SELECTORS = {
     main: '[role="main"]',
@@ -12,8 +21,13 @@
     image: 'img',
     // id derivation, applied to the link pathname / search
     watchPath: /^\/watch\/?$/,
-    reelPath: /^\/reel\/(\d+)/,
-    numericSegment: /\/(\d{8,})(?:\/|$)/,
+    videoId: /^\d{8,}$/,
+    reelPath: /^\/reel\/(\d{8,})(?:\/|$)/,
+    postPaths: [
+      /^\/groups\/[^/]+\/(?:posts|permalink)\/(\d{8,})(?:\/|$)/,
+      /^\/(?:[^/]+\/)?(?:posts|permalink)\/(\d{8,})(?:\/|$)/,
+      /^\/(?!(?:groups|photo|photos|pages|events|people|profile\.php|watch|reel|reels|stories|marketplace|hashtag|saved|share)\/)[^/]+\/(\d{8,})\/[^/]+/,
+    ],
   };
   const TRACKING = ['__tn__', 'ref', 'mibextid', '_rdr'];
   const BASE = 'https://www.facebook.com';
@@ -41,10 +55,10 @@
     }
     if (!hostOk(u.hostname)) return null;
     const v = u.searchParams.get('v');
-    if (SELECTORS.watchPath.test(u.pathname) && v) return { id: v, kind: 'video', url: `${BASE}/watch/?v=${v}` };
+    if (SELECTORS.watchPath.test(u.pathname) && v && SELECTORS.videoId.test(v)) return { id: v, kind: 'video', url: `${BASE}/watch/?v=${v}` };
     const reel = u.pathname.match(SELECTORS.reelPath)?.[1];
     if (reel) return { id: reel, kind: 'reel', url: `${BASE}/reel/${reel}/` };
-    const num = u.pathname.match(SELECTORS.numericSegment)?.[1];
+    const num = SELECTORS.postPaths.map((re) => u.pathname.match(re)?.[1]).find(Boolean);
     if (num) {
       for (const k of TRACKING) u.searchParams.delete(k);
       return { id: num, kind: 'post', url: `${BASE}${u.pathname}${u.search}` };
@@ -75,15 +89,18 @@
       if (g) g.links.push(a);
       else groups.set(p.id, { info: p, links: [a] });
     }
-    const idsIn = (el) => new Set([...el.querySelectorAll(SELECTORS.link)].map((a) => parsed.get(a)?.id).filter(Boolean));
+    // card ids: the two-link pattern (2+ links, one with an img); the rest are secondary
+    const cardIds = new Set([...groups].filter(([, g]) => g.links.length > 1 && g.links.some((a) => a.querySelector(SELECTORS.image))).map(([id]) => id));
+    const idsIn = (el) => new Set([...el.querySelectorAll(SELECTORS.link)].map((a) => parsed.get(a)?.id).filter((x) => cardIds.has(x)));
 
     const items = [];
-    for (const [id, { info, links }] of groups) {
+    for (const id of cardIds) {
+      const { info, links } = groups.get(id);
       try {
         let card = links[0];
         while (
           card.parentElement &&
-          !card.matches(SELECTORS.main) &&
+          !card.parentElement.matches(SELECTORS.main) &&
           !/^(BODY|HTML)$/.test(card.parentElement.tagName) &&
           [...idsIn(card.parentElement)].every((x) => x === id)
         ) {
