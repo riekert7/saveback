@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Saveback",
+  "version": "0.1.0",
+  "description": "Send the posts you saved on social platforms to your own Saveback server, on demand.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://*.x.com/*",
+    "https://*.youtube.com/*",
+    "https://*.linkedin.com/*",
+    "https://*.instagram.com/*",
+    "https://*.facebook.com/*",
+    "https://*.threads.net/*",
+    "https://*.threads.com/*",
+    "http://127.0.0.1:7777/*"
+  ],
+  "optional_host_permissions": ["https://*/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Saveback", "default_popup": "popup.html" }
+}
