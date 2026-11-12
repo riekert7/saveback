@@ -1,0 +1,8 @@
+{
+  "name": "saveback",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22.13" },
+  "scripts": { "test": "node --test" }
+}
