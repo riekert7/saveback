@@ -42,7 +42,7 @@ test('wrong-page message names the right page for each platform, from a real pag
     'https://x.com/home': ['x', /x\.com\/i\/history/],
     'https://www.youtube.com/': ['youtube', /youtube\.com\/playlist\?list=WL/],
     'https://www.linkedin.com/feed/': ['linkedin', /linkedin\.com\/my-items\/saved-posts/],
-    'https://www.instagram.com/': ['instagram', /instagram\.com\/<you>\/saved\//],
+    'https://www.instagram.com/': ['instagram', /Saved > All posts \(instagram\.com\/<you>\/saved\/all-posts\/\)/],
     'https://www.facebook.com/': ['facebook', /facebook\.com\/saved/],
     'https://www.threads.com/': ['threads', /threads\.com\/saved/],
   };

@@ -2,13 +2,13 @@
 // touches chrome.* or the DOM only runs in the browser (module is undefined there).
 const DEFAULT_ENDPOINT = 'http://127.0.0.1:7777';
 // Files injected on Capture. Each adapter task adds its file here, e.g. 'adapters/x.js'.
-const ADAPTER_FILES = ['adapters/x.js', 'adapters/linkedin.js', 'adapters/threads.js'];
+const ADAPTER_FILES = ['adapters/x.js', 'adapters/linkedin.js', 'adapters/threads.js', 'adapters/instagram.js'];
 // Hostname suffix -> platform and the page the user must open. Used for the wrong-page message.
 const SAVED_PAGES = {
   x: { host: 'x.com', page: 'X saved posts, the Bookmarks tab (x.com/i/history)' },
   youtube: { host: 'youtube.com', page: 'a YouTube playlist such as Watch later (youtube.com/playlist?list=WL)' },
   linkedin: { host: 'linkedin.com', page: 'LinkedIn saved posts (linkedin.com/my-items/saved-posts)' },
-  instagram: { host: 'instagram.com', page: 'your Instagram saved page (instagram.com/<you>/saved/)' },
+  instagram: { host: 'instagram.com', page: 'your Instagram Saved > All posts (instagram.com/<you>/saved/all-posts/)' },
   facebook: { host: 'facebook.com', page: 'Facebook saved (facebook.com/saved)' },
   threads: { host: 'threads.net', page: 'Threads saved (threads.com/saved)' },
 };
