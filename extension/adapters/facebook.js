@@ -14,6 +14,12 @@
 //    holding an img (the thumbnail). An id seen through a single link is secondary (a "related video" link
 //    inside another card): it neither ends a climb nor becomes an item. Ceiling: a saved item that really
 //    has just one link is not captured.
+// Known ceilings (live-untested, see docs/platform-status.md):
+//  - Text comes from the id's primary links only; captions outside a primary link are not read.
+//  - Items with a single link, or whose thumbnail link has no img, are skipped.
+//  - A related block that is itself a thumbnail-plus-title pair can become a phantom item or break a card.
+//  - /{page}/videos/{id}/ links are not recognised.
+//  - The reserved-first-segment rule for post-like paths is a blocklist, not an allowlist.
 (function () {
   const SELECTORS = {
     main: '[role="main"]',
