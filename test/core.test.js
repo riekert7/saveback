@@ -187,3 +187,47 @@ test('postBatches sums sent and rejected across batches', async () => {
   const r = await postBatches(items, async () => ({ ok: true, status: 200, rejected: 1 }));
   assert.deepEqual({ ok: r.ok, sent: r.sent, rejected: r.rejected }, { ok: true, sent: 28, rejected: 2 });
 });
+
+test('runCapture reports extract failure and keeps what it already sent', async () => {
+  let step = 0;
+  const adapter = {
+    extract: () => {
+      if (step++ === 1) throw new TypeError("Cannot read properties of null (reading 'querySelector')");
+      return [item(1), item(2)];
+    },
+  };
+  const log = [];
+  const r = await runCapture(adapter, { doc: {}, scroll() {}, sleep: async () => {}, send: okSend(log) });
+  assert.match(r.error, /^extract failed: Cannot read properties of null/);
+  assert.deepEqual({ found: r.found, sent: r.sent }, { found: 2, sent: 2 });
+  assert.deepEqual(ids(log), ['1', '2']);
+  assert.equal(step, 2, 'stops the loop');
+});
+
+test('runCapture treats send throwing as unsent plus error', async () => {
+  const r = await runCapture({ extract: () => [item(1), item(2)] }, {
+    doc: {}, scroll() {}, sleep: async () => {}, send: async () => { throw new Error('Extension context invalidated'); },
+  });
+  assert.equal(r.error, 'Extension context invalidated');
+  assert.deepEqual({ found: r.found, sent: r.sent }, { found: 2, sent: 0 });
+  assert.deepEqual(ids(r.unsent), ['1', '2']);
+});
+
+test('runCapture treats an undefined send reply as an error without throwing', async () => {
+  for (const reply of [undefined, null, 'oops']) {
+    const r = await runCapture({ extract: () => [item(1)] }, {
+      doc: {}, scroll() {}, sleep: async () => {}, send: async () => reply,
+    });
+    assert.equal(r.error, 'no reply from Saveback');
+    assert.deepEqual(ids(r.unsent), ['1']);
+    assert.equal(r.sent, 0);
+  }
+});
+
+test('runCapture survives a throwing onProgress', async () => {
+  const r = await runCapture({ extract: () => [item(1)] }, {
+    doc: {}, scroll() {}, sleep: async () => {}, send: async () => ({ ok: true }), onProgress: () => { throw new Error('gone'); },
+  });
+  assert.equal(r.sent, 1);
+  assert.equal(r.error, undefined);
+});

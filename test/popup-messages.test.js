@@ -40,3 +40,15 @@ test('wrong page says which page to open', () => {
 test('unsupported site lists the supported platforms', () => {
   assert.match(describeResult({}, false), /X.*YouTube.*LinkedIn.*Instagram.*Facebook.*Threads/);
 });
+
+test('extract failure is a capture failure, not the wrong-page message', () => {
+  const s = describeResult({ found: 0, sent: 0, error: 'extract failed: boom' }, true);
+  assert.match(s, /^Capture failed: selectors may be outdated \(boom\)/);
+  assert.doesNotMatch(s, /not a saved page/);
+});
+
+test('generic failure message is shown as Capture failed, not wrong page', () => {
+  const s = describeResult({ failed: 'Extension context invalidated' }, true);
+  assert.equal(s, 'Capture failed: Extension context invalidated');
+  assert.equal(describeResult({ found: 3, sent: 0, error: 'no reply from Saveback' }, true).startsWith('Capture failed: no reply from Saveback.'), true);
+});

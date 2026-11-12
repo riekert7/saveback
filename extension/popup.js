@@ -32,6 +32,7 @@ function describeResult(result, matched) {
       ? `This is not a saved page. Open ${where}, then click Capture.`
       : 'Open a saved-posts page on X, YouTube, LinkedIn, Instagram, Facebook or Threads, then click Capture.';
   }
+  if (result.failed) return `Capture failed: ${result.failed}`;
   const { found, sent, error } = result;
   if (error) {
     const left = Array.isArray(result.unsent) ? result.unsent.length : result.unsent ?? 0;
@@ -40,7 +41,11 @@ function describeResult(result, matched) {
       return `Cannot reach Saveback at ${result.endpoint}. Start it with \`node server/cli.js\` (or \`npx saveback\` once published).${tail}`;
     }
     if (error === 'unauthorized') return `Check your token.${tail}`;
-    return `Saveback returned an error (${error}).${tail}`;
+    if (error.startsWith('extract failed: ')) {
+      return `Capture failed: selectors may be outdated (${error.slice('extract failed: '.length)}).${tail}`;
+    }
+    if (/^http \d+$/.test(error)) return `Capture failed: Saveback answered ${error}.${tail}`;
+    return `Capture failed: ${error}.${tail}`;
   }
   if (found === 0) return '0 found, selectors may be outdated';
   const rejected = result.rejected ? ` (${result.rejected} rejected by the server)` : '';
@@ -79,10 +84,13 @@ async function onCapture(els) {
     try {
       await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['core.js', ...ADAPTER_FILES] });
       [res] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => globalThis.__saveback.capturePage() });
-    } catch {
-      return show(describeResult({ platform: platformForUrl(tab?.url) }, false));
+    } catch (e) {
+      // Restricted or non-host page (no permission to script it): wrong page. Anything else is a real failure.
+      const platform = platformForUrl(tab?.url);
+      return show(platform ? describeResult({ failed: e instanceof Error ? e.message : String(e) }, true) : describeResult({}, false));
     }
-    const result = res.result ?? { matched: false };
+    const result = res?.result;
+    if (!result) return show(describeResult({ failed: 'the page returned no result' }, true));
     show(describeResult({ ...result, endpoint, platform: result.platform ?? platformForUrl(tab.url) }, result.matched));
   } catch (e) {
     show(`Capture failed: ${e instanceof Error ? e.message : e}`);

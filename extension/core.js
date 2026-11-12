@@ -87,7 +87,13 @@
     let stagnantSteps = 0;
     let error;
     for (;;) {
-      const fresh = dedupe(adapter.extract(doc), seen).slice(0, MAX_ITEMS - found);
+      let fresh;
+      try {
+        fresh = dedupe(adapter.extract(doc), seen).slice(0, MAX_ITEMS - found);
+      } catch (e) {
+        error = `extract failed: ${e instanceof Error ? e.message : String(e)}`;
+        break;
+      }
       found += fresh.length;
       stagnantSteps = fresh.length ? 0 : stagnantSteps + 1;
       if (fresh.length) {
@@ -97,6 +103,7 @@
         } catch (e) {
           r = { ok: false, error: e instanceof Error ? e.message : String(e) };
         }
+        if (!r || typeof r !== 'object') r = { ok: false, error: 'no reply from Saveback' };
         const rej = r.rejected ?? 0;
         sent += r.sent ?? (r.ok ? fresh.length - rej : 0);
         rejected += rej;
@@ -104,7 +111,11 @@
           unsent.push(...(r.unsent ?? fresh));
           error = failure(r);
         }
-        onProgress?.({ found, sent });
+        try {
+          onProgress?.({ found, sent });
+        } catch {
+          // progress is cosmetic
+        }
         if (error) break;
       }
       if (shouldStop({ stagnantSteps, total: found })) break;
