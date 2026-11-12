@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
+
+const { ADAPTER_FILES } = createRequire(import.meta.url)('../extension/popup.js');
 
 const dir = new URL('../extension/', import.meta.url);
 const manifest = JSON.parse(readFileSync(new URL('manifest.json', dir), 'utf8'));
@@ -27,4 +30,9 @@ test('manifest points at files that exist', () => {
   for (const f of [manifest.background.service_worker, manifest.action.default_popup, 'core.js', 'popup.js']) {
     assert.ok(existsSync(new URL(f, dir)), f);
   }
+});
+
+test('every popup ADAPTER_FILES entry exists under extension/', () => {
+  assert.ok(ADAPTER_FILES.length > 0);
+  for (const f of ADAPTER_FILES) assert.ok(existsSync(new URL(f, dir)), f);
 });

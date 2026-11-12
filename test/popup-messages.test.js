@@ -76,3 +76,21 @@ test('generic failure message is shown as Capture failed, not wrong page', () =>
   assert.equal(s, 'Capture failed: Extension context invalidated');
   assert.equal(describeResult({ found: 3, sent: 0, error: 'no reply from Saveback' }, true).startsWith('Capture failed: no reply from Saveback.'), true);
 });
+
+test('onCapture saves endpoint and token first, un-awaited, so the click still gates permissions.request', async () => {
+  const { onCapture } = require('../extension/popup.js');
+  const calls = [];
+  globalThis.chrome = {
+    storage: { local: { set: (v) => { calls.push(['set', v]); return new Promise(() => {}); } } }, // never settles
+    permissions: { request: async (p) => { calls.push(['request', p]); return false; } },
+  };
+  const els = { endpoint: { value: 'https://saveback.example.com/' }, token: { value: ' tok ' }, capture: {}, result: {} };
+  try {
+    await onCapture(els);
+  } finally {
+    delete globalThis.chrome;
+  }
+  assert.deepEqual(calls.map((c) => c[0]), ['set', 'request']);
+  assert.deepEqual(calls[0][1], { endpoint: 'https://saveback.example.com', token: 'tok' });
+  assert.match(els.result.textContent, /not granted/);
+});

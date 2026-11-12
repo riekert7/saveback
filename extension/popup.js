@@ -66,7 +66,10 @@ async function onCapture(els) {
     } catch {
       return show('Endpoint must be an http(s) URL, for example http://127.0.0.1:7777.');
     }
-    // Must run first: permissions.request needs the click's user gesture. Already-granted origins resolve true.
+    // Not awaited: permissions.request must run in the click's user gesture, and a popup that closes on the
+    // permission dialog must not lose the settings.
+    chrome.storage.local.set({ endpoint, token: els.token.value.trim() });
+    // Already-granted origins resolve true.
     if (origin !== DEFAULT_ENDPOINT) {
       let granted = false;
       try {
@@ -76,7 +79,6 @@ async function onCapture(els) {
       }
       if (!granted) return show(`Permission to reach ${origin} was not granted. Use https:// or ${DEFAULT_ENDPOINT}.`);
     }
-    await chrome.storage.local.set({ endpoint, token: els.token.value.trim() });
 
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     show('Capturing, keep this page open...');
@@ -110,5 +112,5 @@ async function init() {
   els.capture.addEventListener('click', () => onCapture(els));
 }
 
-if (typeof module !== 'undefined') module.exports = { describeResult, platformForUrl };
+if (typeof module !== 'undefined') module.exports = { describeResult, platformForUrl, onCapture, ADAPTER_FILES };
 else init();

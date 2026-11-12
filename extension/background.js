@@ -12,6 +12,7 @@ async function post(items) {
     method: 'POST',
     headers,
     body: JSON.stringify({ items }),
+    signal: AbortSignal.timeout(30_000), // an abort throws, which postWithSplit reports as a network error
   });
   let rejected = 0;
   if (res.ok) {

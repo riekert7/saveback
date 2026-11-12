@@ -42,7 +42,7 @@ Last checked: 2026-11-13. Every adapter was built from the real page structure c
 **youtube**
 - Built from a public playlist's page structure because the maintainer's own Watch Later and playlists are empty, so it is untested on a real Watch Later.
 - Author is empty (the channel name is not reliably in the row).
-- Transcripts are not captured by the extension; the server fetches them on demand through `save_url`.
+- Transcripts are not captured by the extension; the server attempts to fetch them on demand through `save_url` (YouTube may not serve captions to non-browser clients, so it can be empty).
 
 **all platforms**
 - If a platform changes its markup the popup shows `0 found, selectors may be outdated`; the fix is in the adapter's `SELECTORS` and its fixture (see [adding-a-platform.md](adding-a-platform.md)).

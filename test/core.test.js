@@ -20,9 +20,9 @@ test('chunk splits into n-sized groups', () => {
   assert.deepEqual(chunk([], 25), []);
 });
 
-test('shouldStop at 3 stagnant steps', () => {
-  assert.equal(shouldStop({ stagnantSteps: 2, total: 10 }), false);
-  assert.equal(shouldStop({ stagnantSteps: 3, total: 10 }), true);
+test('shouldStop at 5 stagnant steps', () => {
+  assert.equal(shouldStop({ stagnantSteps: 4, total: 10 }), false);
+  assert.equal(shouldStop({ stagnantSteps: 5, total: 10 }), true);
 });
 
 test('shouldStop at 2000 total', () => {
@@ -91,15 +91,15 @@ test('runCapture with zero items returns found 0', async () => {
   assert.equal(sends, 0);
 });
 
-test('runCapture stops after 3 stagnant steps, sleeping 800-1400 ms between steps', async () => {
+test('runCapture stops after 5 stagnant steps, sleeping 800-1400 ms between steps', async () => {
   const sleeps = [];
   let scrolls = 0;
   const r = await runCapture({ extract: () => [item(1)] }, {
     doc: {}, scroll: () => { scrolls++; }, sleep: async (ms) => { sleeps.push(ms); }, send: async () => ({ ok: true }),
   });
   assert.equal(r.found, 1);
-  assert.equal(scrolls, 3); // step 1 finds the item; steps 2-4 find nothing; stop
-  assert.equal(sleeps.length, 3);
+  assert.equal(scrolls, 5); // step 1 finds the item; steps 2-6 find nothing; stop
+  assert.equal(sleeps.length, 5);
   assert.ok(sleeps.every((ms) => ms >= 800 && ms < 1400), sleeps.join());
 });
 

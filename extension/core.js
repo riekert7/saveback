@@ -4,7 +4,7 @@
 (function () {
   const STEP_MS = 800;
   const JITTER_MS = 600;
-  const STAGNANT_LIMIT = 3;
+  const STAGNANT_LIMIT = 5; // slow loaders on Instagram and Facebook
   const MAX_ITEMS = 2000;
   const BATCH_SIZE = 25;
 

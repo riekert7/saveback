@@ -2,8 +2,8 @@
 // Structure (2026-11-13, from a PUBLIC playlist because the user's own lists were empty, so this is
 // untested on a real Watch later): one yt-lockup-view-model per row, holding two anchors to the video,
 // /watch?v={id}&list=...: the thumbnail anchor (an img plus the duration text, e.g. "12:34") and the title
-// anchor. The channel name is not reliably in the row (author ''); the server's save_url fetches the
-// transcript on demand (transcript null).
+// anchor. The channel name is not reliably in the row (author ''); the server's save_url attempts the
+// transcript on demand (transcript null here; it may be empty there too).
 (function () {
   const SELECTORS = {
     row: 'yt-lockup-view-model',

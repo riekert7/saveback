@@ -23,7 +23,7 @@ claude mcp add saveback -- node /absolute/path/to/server/cli.js
 
 After it is published this becomes `claude mcp add saveback -- npx saveback`.
 
-Local mode serves MCP over stdio and a receiver for the extension on `127.0.0.1:7777` (override with `SAVEBACK_PORT`). Data lives in `~/.saveback/saveback.db` unless `SAVEBACK_DB` points elsewhere.
+Local mode serves MCP over stdio and a receiver for the extension on `127.0.0.1:7777` (override with `SAVEBACK_PORT`; the extension only reaches `http://127.0.0.1:7777`, so keep port 7777 if you use it in local mode). Data lives in `~/.saveback/saveback.db` unless `SAVEBACK_DB` points elsewhere.
 
 ## Browser extension
 
@@ -47,7 +47,7 @@ The result line in the popup reads:
 - `This is not a saved page. Open ...`: the current tab is not the page for that platform.
 - `Cannot reach Saveback at <endpoint>` or `Check your token.`: the server is not running or the token is wrong. Items not sent are counted (`N found, M saved, K not sent`); click Capture again to retry.
 
-Capture stops after 3 scroll steps with nothing new, or at 2000 items. Per-platform limits are in [docs/platform-status.md](docs/platform-status.md); to add a platform see [docs/adding-a-platform.md](docs/adding-a-platform.md).
+Capture stops after 5 scroll steps with nothing new, or at 2000 items. Per-platform limits are in [docs/platform-status.md](docs/platform-status.md); to add a platform see [docs/adding-a-platform.md](docs/adding-a-platform.md).
 
 ## MCP tools
 
@@ -60,7 +60,7 @@ Capture stops after 3 scroll steps with nothing new, or at 2000 items. Per-platf
 | `mark_seen` | Mark an item as dealt with |
 | `add_note` | Attach a searchable note to an item |
 | `tag` | Replace the tags on an item |
-| `save_url` | Fetch a public web page or YouTube video (with transcript when captions exist) and store it |
+| `save_url` | Fetch a public web page or YouTube video and store it; attempts to fetch the transcript (YouTube may not serve captions to non-browser clients, so it can be empty) |
 
 ## Self-host on Railway
 
@@ -72,7 +72,7 @@ A first deploy fails its health check until `SAVEBACK_MODE=remote` and `SAVEBACK
 2. Add a volume mounted at `/data`.
 3. Set the variables:
    - `SAVEBACK_MODE=remote`
-   - `SAVEBACK_TOKEN` a long random secret, e.g. from `openssl rand -hex 32` (the server refuses to start without it)
+   - `SAVEBACK_TOKEN` a long random secret, e.g. from `openssl rand -hex 32` (the server trims it and refuses to start without it or with fewer than 16 characters)
    - `SAVEBACK_DB=/data/saveback.db`
    - `RAILPACK_NODE_VERSION=22` to make sure the build uses Node 22 (the server needs 22.13 or newer; Railway's builder also reads `engines.node` from `package.json`, this variable just removes any doubt)
 4. Generate a public domain. Railway sets `PORT` itself; the server listens on it.
@@ -83,13 +83,14 @@ A first deploy fails its health check until `SAVEBACK_MODE=remote` and `SAVEBACK
 claude mcp add --transport http saveback https://<your-domain>/mcp --header "Authorization: Bearer <token>"
 ```
 
-`claude mcp add --header` stores the token in Claude's config (`~/.claude.json`). To rotate it, change `SAVEBACK_TOKEN` on the server run `claude mcp remove saveback`, then add the server again with the new token (adding it twice under the same name fails), and paste the new token into the extension popup.
+`claude mcp add --header` stores the token in Claude's config (`~/.claude.json`). To rotate it, change `SAVEBACK_TOKEN` on the server, then run `claude mcp remove saveback` (add `-s user` or `-s project` if you added it with that scope) and add the server again with the new token (adding it twice under the same name fails), and paste the new token into the extension popup.
 
 ## Privacy and safety
 
 - Your data stays in your own SQLite file (local disk, or the volume on your own Railway deploy). Nothing is sent to a Saveback service.
 - The extension reads a page only when you click Capture: the popup injects the capture script into the active tab at that moment, and there are no content scripts that run on their own.
 - Capture happens in your own logged-in browser. Scraping logged-in pages may go against a platform's terms of service; use at your own risk.
+- Saved content is third-party text and can contain instructions aimed at Claude. Do not auto-approve `save_url` (it fetches whatever URL it is given), and treat saved text as data, not commands.
 - Hosted mode is single-tenant: one deploy, one token, one person's data. `save_url` refuses private and local addresses (a small DNS-rebinding window is a known limit).
 
 ## License
