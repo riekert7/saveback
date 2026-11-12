@@ -58,6 +58,16 @@ test('health', async () => {
   close();
 });
 
+test('health is open without a token even when a token is set; ingest is not', async () => {
+  const { base, close } = await start({ token: 's3cret' });
+  const res = await fetch(`${base}/health`);
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { ok: true });
+  assert.equal((await fetch(`${base}/health`, { headers: { origin: 'https://evil.example' } })).status, 403);
+  assert.equal((await post(base, { items: [] })).status, 401);
+  close();
+});
+
 test('403 for Origin https://evil.example, even with a valid token', async () => {
   const { db, base, close } = await start({ token: 's3cret' });
   const res = await post(base, { items: [mk()] }, { origin: 'https://evil.example', authorization: 'Bearer s3cret' });

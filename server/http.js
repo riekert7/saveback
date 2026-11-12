@@ -38,13 +38,15 @@ export function createReceiver({ db, token }) {
       });
     }
 
+    const path = (req.url ?? '').split('?')[0];
+    // /health is open on purpose: platform health checks cannot send a bearer token.
+    if (req.method === 'GET' && path === '/health') return send(200, { ok: true });
+
     if (token) {
       const m = /^Bearer (.*)$/.exec(req.headers.authorization ?? '');
       if (!m || !safeEqual(m[1], token)) return send(401, { error: 'unauthorized' });
     }
 
-    const path = (req.url ?? '').split('?')[0];
-    if (req.method === 'GET' && path === '/health') return send(200, { ok: true });
     if (req.method !== 'POST' || path !== '/ingest') return send(404, { error: 'not found' });
 
     // Read at most MAX_BODY bytes; past that, keep draining but stop storing.
