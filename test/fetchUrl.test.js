@@ -103,6 +103,12 @@ test('html page becomes web item with title and stripped text', async () => {
   assert.equal(item.transcript, null);
 });
 
+test('a page with <head> but no </head> still yields its body text, title once', async () => {
+  const page = '<html><head><title>Lonely</title><meta charset="utf-8"><body><p>Body words survive</p></body></html>';
+  const item = await fetchSaveable('https://a.example/nohead', { fetch: stub(() => html(page)), lookup: PUBLIC });
+  assert.equal(item.text, 'Lonely\n\nBody words survive');
+});
+
 test('text is capped at 20000 chars and the body read is capped at 2 MB', async () => {
   const big = '<title>t</title><p>' + 'a'.repeat(3 * 1024 * 1024) + '</p>';
   const item = await fetchSaveable('https://a.example/', { fetch: stub(() => html(big)), lookup: PUBLIC });

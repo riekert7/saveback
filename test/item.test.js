@@ -44,3 +44,12 @@ test('drops unknown fields', () => {
   const item = validateItem({ ...full, evil: 1 });
   assert.equal('evil' in item, false);
 });
+
+test('saved_at must be an ISO date-time string that parses, or null', () => {
+  for (const ok of ['2026-11-12T10:00:00.000Z', '2026-11-12T10:00:00+02:00', null]) {
+    assert.equal(validateItem({ ...full, saved_at: ok }).saved_at, ok);
+  }
+  for (const bad of ['yesterday', '2026-11-12', '12 Nov 2026', 'Nov 2026 T', '2026-13-45T10:00:00Z', 5]) {
+    assert.throws(() => validateItem({ ...full, saved_at: bad }), /saved_at/, String(bad));
+  }
+});

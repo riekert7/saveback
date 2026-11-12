@@ -120,9 +120,10 @@ const decode = (s) =>
 /** Every pattern stops at the next '<' or end of input, so unclosed tags cannot cause quadratic backtracking. @param {string} html */
 function htmlToText(html) {
   const title = /<title\b[^<>]*>([^<]*)/i.exec(html)?.[1] ?? '';
+  // <head> is not stripped (its end tag is optional); title is, since it is extracted above.
   const body = html
     .replace(/<!--[\s\S]*?(?:-->|$)/g, ' ')
-    .replace(/<(script|style|noscript|template|head)\b[\s\S]*?(?:<\/\1\s*>|$)/gi, ' ')
+    .replace(/<(script|style|noscript|template|title)\b[\s\S]*?(?:<\/\1\s*>|$)/gi, ' ')
     .replace(/<[^<>]*>/g, ' ');
   const squash = (s) => decode(s).replace(/\s+/g, ' ').trim();
   return [squash(title), squash(body)].filter(Boolean).join('\n\n').slice(0, MAX_TEXT);

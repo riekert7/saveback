@@ -36,8 +36,8 @@ export function validateItem(raw) {
     throw new Error('media: must be an array of http(s) urls');
   }
   const saved_at = r.saved_at ?? null;
-  if (saved_at !== null && (typeof saved_at !== 'string' || Number.isNaN(Date.parse(saved_at)))) {
-    throw new Error('saved_at: must be an ISO date string or null');
+  if (saved_at !== null && (typeof saved_at !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(saved_at) || Number.isNaN(Date.parse(saved_at)))) {
+    throw new Error('saved_at: must be an ISO date-time string (YYYY-MM-DDT...) or null');
   }
   const transcript = r.transcript ?? null;
   if (transcript !== null && typeof transcript !== 'string') throw new Error('transcript: must be a string or null');
