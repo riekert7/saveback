@@ -117,13 +117,13 @@ const decode = (s) =>
     return cp <= 0x10ffff ? String.fromCodePoint(cp) : m;
   });
 
-/** @param {string} html */
+/** Every pattern stops at the next '<' or end of input, so unclosed tags cannot cause quadratic backtracking. @param {string} html */
 function htmlToText(html) {
-  const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] ?? '';
+  const title = /<title\b[^<>]*>([^<]*)/i.exec(html)?.[1] ?? '';
   const body = html
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<(script|style|noscript|template|head)\b[\s\S]*?<\/\1\s*>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ');
+    .replace(/<!--[\s\S]*?(?:-->|$)/g, ' ')
+    .replace(/<(script|style|noscript|template|head)\b[\s\S]*?(?:<\/\1\s*>|$)/gi, ' ')
+    .replace(/<[^<>]*>/g, ' ');
   const squash = (s) => decode(s).replace(/\s+/g, ' ').trim();
   return [squash(title), squash(body)].filter(Boolean).join('\n\n').slice(0, MAX_TEXT);
 }
@@ -177,7 +177,7 @@ export async function fetchSaveable(url, deps = {}) {
       try { // caption url comes from page content, so it goes through the same guard
         const cap = await guardedGet(track, d, signal);
         const xml = await readCapped(cap.res);
-        const lines = [...xml.matchAll(/<text\b[^>]*>([\s\S]*?)<\/text>/g)].map((x) => decode(x[1]).replace(/\s+/g, ' ').trim());
+        const lines = [...xml.matchAll(/<text\b[^<>]*>([^<]*)/g)].map((x) => decode(x[1]).replace(/\s+/g, ' ').trim());
         transcript = lines.filter(Boolean).join(' ') || null;
       } catch { /* no usable captions */ }
     }

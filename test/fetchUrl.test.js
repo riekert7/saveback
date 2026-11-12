@@ -156,3 +156,34 @@ test('youtube caption url is also guarded', async () => {
   assert.equal(item.transcript, null);
   assert.equal(f.calls.length, 1);
 });
+
+// ReDoS guard: hostile bodies of unclosed tags must not block the event loop (BIG env only shrinks the RED demo run).
+const BIG = Number(process.env.BIG ?? 2 * 1024 * 1024);
+const rep = (s) => s.repeat(Math.ceil(BIG / s.length)).slice(0, BIG);
+async function timedWeb(body) {
+  const t = Date.now();
+  const item = await fetchSaveable('https://a.example/', { fetch: stub(() => html(body)), lookup: PUBLIC });
+  return { item, ms: Date.now() - t };
+}
+
+for (const [name, unit] of [['<', '<'], ['<!--', '<!--'], ['<script', '<script'], ['<title', '<title ']]) {
+  test(`hostile body of repeated unclosed "${name}" is handled fast`, async () => {
+    const { ms } = await timedWeb(rep(unit));
+    assert.ok(ms < 1000, `took ${ms} ms`);
+  });
+}
+
+test('unclosed <script> leaves none of its contents in the text', async () => {
+  const { item } = await timedWeb('<title>t</title><p>before</p><script>alert(1)');
+  assert.doesNotMatch(item.text, /alert/);
+  assert.match(item.text, /before/);
+});
+
+test('hostile caption xml of repeated "<text " is handled fast', async () => {
+  const f = stub((u) => (u.includes('/api/timedtext') ? new Response(rep('<text '), { headers: { 'content-type': 'text/xml' } }) : html(yt)));
+  const t = Date.now();
+  const item = await fetchSaveable('https://www.youtube.com/watch?v=abc123XYZ_-', { fetch: f, lookup: PUBLIC });
+  const ms = Date.now() - t;
+  assert.ok(ms < 1000, `took ${ms} ms`);
+  assert.equal(item.transcript, null);
+});
