@@ -39,16 +39,16 @@ test('wrong page says which page to open', () => {
 
 test('wrong-page message names the right page for each platform, from a real page URL', () => {
   const cases = {
-    'https://x.com/home': ['x', /x\.com\/i\/history/],
-    'https://www.youtube.com/': ['youtube', /youtube\.com\/playlist\?list=WL/],
-    'https://www.linkedin.com/feed/': ['linkedin', /linkedin\.com\/my-items\/saved-posts/],
-    'https://www.instagram.com/': ['instagram', /Saved > All posts \(instagram\.com\/<you>\/saved\/all-posts\/\)/],
-    'https://www.facebook.com/': ['facebook', /facebook\.com\/saved/],
-    'https://www.threads.com/': ['threads', /threads\.com\/saved/],
+    'https://x.com/home': ['x', 'Open X saved posts, the Bookmarks tab (x.com/i/history), then click Capture.'],
+    'https://www.youtube.com/': ['youtube', 'Open a playlist page such as Watch Later (youtube.com/playlist?list=WL), then click Capture.'],
+    'https://www.linkedin.com/feed/': ['linkedin', 'Open LinkedIn saved posts (linkedin.com/my-items/saved-posts), then click Capture.'],
+    'https://www.instagram.com/': ['instagram', 'Open your Instagram Saved > All posts (instagram.com/<you>/saved/all-posts/), then click Capture.'],
+    'https://www.facebook.com/': ['facebook', 'Open Facebook saved (facebook.com/saved), then click Capture.'],
+    'https://www.threads.com/': ['threads', 'Open Threads saved (threads.com/saved), then click Capture.'],
   };
   for (const [url, [platform, page]] of Object.entries(cases)) {
     assert.equal(platformForUrl(url), platform, url);
-    assert.match(describeResult({ platform: platformForUrl(url) }, false), page, url);
+    assert.equal(describeResult({ platform: platformForUrl(url) }, false), `This is not a saved page. ${page}`, url);
   }
 });
 
